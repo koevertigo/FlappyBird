@@ -24,15 +24,20 @@ import java.util.Random;
 
 public class FlappyBird extends Application {
   // Anfang Attribute
-  private static final Rectangle bird = new Rectangle();
-  private long lastTime = 0;
-  private static final ArrayList<Rectangle> obstacles = new ArrayList<>();
-  private static final double[] velocity = {0, 150};
-  private static double score = 0;
-  private static int obstacleOffset = 0;
+  private static Rectangle bird;
+  private long lastTime;
+  private static ArrayList<Rectangle> obstacles;
+
+  private static double velocity;
+  private static double acceleration;
+
+  private static double score;
   private Text scoreText;
 
-  private static boolean isRunning = true;
+  private double obstacleOffset;
+
+
+  private static boolean isRunning;
   // Ende Attribute
   
   public void start(Stage stage) {
@@ -41,31 +46,18 @@ public class FlappyBird extends Application {
 
     Pane root = new Pane();
 
-    createBird(root);
-
-
-    Scene scene = new Scene(root, 600, 600);
-    scene.setFill(Color.GAINSBORO);
-    stage.setScene(scene);
-
-    stage.show();
-
-    stage.setResizable(false);
-
-    spawnObstacles(stage, root, 1000);
-    createScore(root);
-
+    isRunning = false;
 
     AnimationTimer animationTimer = getAnimationTimer(stage, root);
 
-    double newVelY = velocity[1] * -1.75;
+    double newVelocity = velocity * -1.75;
 
     scene.setOnKeyPressed(event -> {
       switch (event.getCode()) {
         case SPACE:
           // Beispiel: Vogel nach oben bewegen
 
-          velocity[1] = newVelY;
+          velocity = newVelocity;
 
           break;
 
@@ -78,7 +70,20 @@ public class FlappyBird extends Application {
     });
 
 
+    
+
+
   } // end of public FlappyBird
+
+
+
+  private Scene createScene(Pane root) {
+    Scene scene = new Scene(root, 600, 600);
+    scene.setFill(Color.GAINSBORO);
+
+
+    return scene;
+  }
 
   private void createScore(Pane root) {
     Font font;
@@ -102,9 +107,7 @@ public class FlappyBird extends Application {
     scoreText.applyCss();
     scoreText.setFill(Color.BLACK);
 
-
     root.getChildren().add(scoreText);
-
   }
 
   private AnimationTimer getAnimationTimer(Stage stage, Pane root) {
@@ -115,24 +118,17 @@ public class FlappyBird extends Application {
         if (lastTime > 0) {
           double deltaTime = (now - lastTime) / 1_000_000_000.0;
 
-          final double xAccel = 0;
-          final double yAccel = 800; // Erhöhte Beschleunigung
+          acceleration = 800; // Erhöhte Beschleunigung
 
-          double newXVelocity = velocity[0] + xAccel * deltaTime;
-          double newYVelocity = velocity[1] + yAccel * deltaTime;
+         
+          double newVelocity = velocity + acceleration * deltaTime;
+          double newY = bird.getTranslateY() + newVelocity * deltaTime;
 
-          double newX = bird.getTranslateX() + newXVelocity * deltaTime;
-          double newY = bird.getTranslateY() + newYVelocity * deltaTime;
-
-          bird.setTranslateX(newX);
-          bird.setTranslateY(newY);
-
-          velocity[0] = newXVelocity;
-          velocity[1] = newYVelocity;
+          
+          bird.setTranslateY(newY);          
+          velocity = newVelocity;
 
           moveObstacles(root, stage);
-
-
           hasDied(stage, root, this);
 
 
@@ -224,8 +220,6 @@ public class FlappyBird extends Application {
       subtitle.setFill(Color.WHITE);
 
       root.getChildren().addAll(overlay, title, subtitle);
-
-      System.out.println("Game over: " + !isRunning);
     }
   }
 
@@ -282,11 +276,22 @@ public class FlappyBird extends Application {
   }
 
   private void restart(Pane root, Stage stage, AnimationTimer animationTimer) {
+    createBird(root);
+    createScene(root);
+
+    stage.setScene(createScene(root));
+    stage.show();
+    stage.setResizable(false);
+
+    spawnObstacles(stage, root, 1000);
+    createScore(root);
+
     isRunning = true;
+
     bird.setTranslateX(50);
     bird.setTranslateY(50);
 
-    velocity[1] = 150;
+    velocity = 150;
 
     // Alte Obstacles entfernen
     root.getChildren().removeAll(obstacles);
