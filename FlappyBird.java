@@ -168,59 +168,8 @@ public class FlappyBird extends Application {
       }
 
       if (!isRunning) {
-      animationTimer.stop();
-
-      Rectangle overlay = new Rectangle();
-      overlay.setFill(new Color(0.00, 0.00, 0.00, 0.5)); // Fehler 5: Korrektur der Schreibweise
-
-      overlay.setX(0);
-      overlay.setY(0);
-
-      overlay.setWidth(stage.getWidth());
-      overlay.setHeight(stage.getHeight());
-
-
-      Font font;
-      try {
-        font = Font.loadFont(getClass().getResourceAsStream("/fonts/font.ttf"), 48);
-        if (font == null) {
-
-          font = Font.font("Arial", 48);
-        }
-      } catch (Exception e) {
-        font = Font.font("Arial", 48);
+        createDeathScreen(stage, root);
       }
-
-      Text title = new Text("You Died!");
-      Text subtitle = new Text("Press any key to restart");
-
-      title.setFont(Font.font(font.getFamily(), 48));
-      subtitle.setFont(Font.font(font.getFamily(), 32));
-
-      title.setTextAlignment(TextAlignment.CENTER);
-      subtitle.setTextAlignment(TextAlignment.CENTER);
-
-
-      title.applyCss();
-      subtitle.applyCss();
-
-      double titleW = title.getBoundsInLocal().getWidth();
-      double titleH = title.getBoundsInLocal().getHeight();
-
-      double subtitleW = subtitle.getBoundsInLocal().getWidth();
-      double subtitleH = subtitle.getBoundsInLocal().getHeight();
-
-      title.setX((stage.getWidth() - titleW) / 2);
-      title.setY((stage.getHeight() - titleH) / 2);
-
-      subtitle.setX((stage.getWidth() - subtitleW) / 2);
-      subtitle.setY(((stage.getHeight() - subtitleH) / 2) + titleH);
-
-      title.setFill(Color.WHITE);
-      subtitle.setFill(Color.WHITE);
-
-      root.getChildren().addAll(overlay, title, subtitle);
-    }
   }
 
   public void spawnObstacles(Stage stage, Pane root, double numberOfObstacles) {
@@ -257,6 +206,70 @@ public class FlappyBird extends Application {
       root.getChildren().addAll(top, bottom);
     }
   }
+
+  private void createDeathScreen(Stage stage, Pane root) {
+    animationTimer.stop();
+
+      Rectangle overlay = new Rectangle();
+      overlay.setFill(new Color(0.00, 0.00, 0.00, 0.5)); // Fehler 5: Korrektur der Schreibweise
+
+      overlay.setX(0);
+      overlay.setY(0);
+
+      overlay.setWidth(stage.getWidth());
+      overlay.setHeight(stage.getHeight());
+
+      root.getChildren().addAll(createCenteredText(stage, "You Died!", 48, 0),
+crea
+
+);
+
+
+      
+   
+
+  }
+
+  private Text createCenteredText(Stage stage, String string, int fontSize, double verticalOffset) {
+
+    Font font;
+      try {
+        font = Font.loadFont(getClass().getResourceAsStream("/fonts/font.ttf"), fontSize);
+        if (font == null) {
+
+          font = Font.font("Arial", fontSize);
+        }
+      } catch (Exception e) {
+        font = Font.font("Arial", fontSize);
+      }
+
+      Text text = new Text(string);
+
+      title.setFont(font);
+     
+    text.setTextAlignment(TextAlignment.CENTER);
+    
+
+      text.applyCss();
+      
+      double textW = text.getBoundsInLocal().getWidth();
+      double textH = text.getBoundsInLocal().getHeight();
+
+
+      text.setX((stage.getWidth() - textW) / 2);
+      text.setY(((stage.getHeight() - textH) / 2) - verticalOffset);
+
+     
+
+      text.setFill(Color.WHITE);
+
+  
+
+
+      return text;
+  }
+
+
 
   public void moveObstacles(Pane root, Stage stage) {
     ArrayList<Rectangle> toRemove = new ArrayList<>();
