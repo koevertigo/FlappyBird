@@ -3,7 +3,6 @@
     <output-path>$PROJECT_DIR$/out/artifacts/FlappyBird</output-path>
     <root id="archive" name="FlappyBird.jar">
       <element id="module-output" name="FlappyBird" />
-      <element id="library" level="project" name="lib" />
     </root>
   </artifact>
 </component>
