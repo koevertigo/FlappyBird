@@ -1,313 +1,350 @@
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import javafx.scene.text.FontWeight;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Random;
-
-/**
- *
- * Beschreibung
- *
- * @version 1.0 vom 12.05.2025
- * @author Paul & Julian (& Kyo)
- */
+import java.io.InputStream;
 
 public class FlappyBird extends Application {
 
-  // Anfang Attribute
-  private static Rectangle bird = new Rectangle(); // Vogel als Rechteck initialisieren
-  private static ArrayList<Rectangle> obstacles = new ArrayList<>(); // Liste der Hindernisse
+  // Texturen laden
+  private final Image background_day = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/background-day.png"))); // Hintergrund
+  private final Image message = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/message.png"))); // Startbild
+  private final Image pipe_green = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/pipe-green.png"))); // Grünes Rohr
+  private final Image pipe_red = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/pipe-red.png"))); // Rotes Rohr (optional)
+  private final Image bird_flip_up = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/yellowbird-upflap.png"))); // Vogel Flügel oben
+  private final Image bird_flip_mid = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/yellowbird-midflap.png"))); // Vogel Flügel Mitte
+  private final Image bird_flip_down = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/yellowbird-downflap.png"))); // Vogel Flügel unten
+  private final Image gameover = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/assets/textures/gameover.png"))); // Gameover-Bild
 
-  private static double acceleration = 800; // Beschleunigungsvariabel
-  private static final double GAME_SPEED = 3; // Geschwindigkeit der Hindernisse
-  private static double velocity = 150; // Geschwindigkeitsvariabel
-  private static double score = 0; // Score-Wert
-  private static double obstacleOffset = 0; // Abstand
+  // Attribute
+  private static ImageView bird; // Vogel als ImageView
+  private static double acceleration = 800; // Beschleunigung nach unten (Schwerkraft)
+  private static final double GAME_SPEED = 1.5; // Geschwindigkeit der Hindernisse
+  private static double velocity = 150; // Vertikale Geschwindigkeit des Vogels
+  private static int score = 0; // Punktestand als int
+  private static AnimationTimer animationTimer; // AnimationTimer für das Spiel
+  private long lastTime = 0; // Letzte Zeit für DeltaTime-Berechnung
+  private static boolean isRunning = false; // Gibt an, ob das Spiel läuft
+  private final double WIDTH = 600;   // Fensterbreite
+  private final double HEIGHT = 800; // Fensterhöhe
+  private static final ArrayList<ImageView> obstacles = new ArrayList<>(); // Liste der Hindernisse
+  private static Text scoreText; // Textobjekt für Score-Anzeige
 
-
-  private static AnimationTimer animationTimer; // Animation Timer, zur berechnung von Bewegung und Animatioen
-  private long lastTime = 0; // Vorherige Zeit zur Berechnung von deltaTime (Spielzeit)
-
-  private static boolean isRunning; // Boolean, ob das Spiel läuft
-  // Ende Attribute
-
+  // Für Score-Logik: Merke, welches Hindernis zuletzt gezählt wurde
+  private static ImageView lastScoredObstacle = null;
 
   public void start(Stage stage) {
-    stage.setTitle("Flappy Bird");
+    stage.setTitle("Flappy Bird"); // Setze Fenstertitel
+    stage.setHeight(HEIGHT); // Setze Fensterhöhe
+    stage.setWidth(WIDTH); // Setze Fensterbreite
+    stage.setResizable(false); // Fenster nicht skalierbar
 
-    stage.setHeight(600);
-    stage.setWidth(600);
+    Pane root = new Pane(); // Erstelle Root-Container
+    root.setPrefSize(WIDTH, HEIGHT); // Setze feste Größe für das Spielfeld
+    Scene scene = createScene(root, stage); // Erstelle Szene
 
-    stage.setResizable(false);
+    // Hintergrundbild hinzufügen
+    ImageView backgroundView = new ImageView(background_day); // Erstelle Hintergrund-ImageView
+    backgroundView.setFitHeight(HEIGHT); // Setze Höhe
+    backgroundView.setFitWidth(WIDTH); // Setze Breite
+    backgroundView.setPreserveRatio(false); // Kein Seitenverhältnis erzwingen
+    root.getChildren().add(backgroundView); // Füge Hintergrund hinzu
 
-    Pane root = new Pane();
-    Scene scene = createScene(root, stage);
+    // Startbild (message) hinzufügen, scharf und mittig
+    ImageView messageView = new ImageView(message); // Erstelle Startbild-ImageView
+    messageView.setSmooth(false); // Keine Weichzeichnung, damit es nicht blurry ist
+    messageView.setPreserveRatio(true); // Seitenverhältnis beibehalten
+    messageView.setFitWidth(300); // Setze eine sinnvolle Breite
+    messageView.setX((WIDTH - messageView.getFitWidth()) / 2); // Zentriere horizontal
+    messageView.setY((HEIGHT - messageView.getImage().getHeight()) / 2); // Zentriere vertikal
+    root.getChildren().add(messageView); // Füge Startbild hinzu
 
+    // Score-Anzeige initialisieren (erst später zum root hinzufügen!)
+    scoreText = new Text("Score: 0"); // Erstelle Score-Text
+    try {
+      InputStream fontStream = getClass().getResourceAsStream("/assets/fonts/Greek-Freak.ttf");
+      if (fontStream != null) {
+        scoreText.setFont(Font.loadFont(fontStream, 44));
+      } else {
+        scoreText.setFont(Font.font("Consolas", FontWeight.BOLD, 44));
+      }
+    } catch (Exception e) {
+      scoreText.setFont(Font.font("Consolas", FontWeight.BOLD, 44));
+    }
+    scoreText.setFill(Color.WHITE); // Setze Schriftfarbe
+    scoreText.setStroke(Color.BLACK); // Schwarzer Rand für bessere Lesbarkeit
+    scoreText.setStrokeWidth(2); // Dicke des Randes
+    scoreText.setX(24); // Setze X-Position
+    scoreText.setY(60); // Setze Y-Position
 
-    animationTimer = getAnimationTimer(stage, root);
-    buildGame(root, stage);
+    double newVelocity = velocity * -1.75; // Sprungkraft berechnen
 
-
-    double newVelocity = velocity * -1.75;
+    // Tasteneingaben behandeln
     scene.setOnKeyPressed(event -> {
       switch (event.getCode()) {
-        case SPACE:
-          // Beispiel: Vogel nach oben bewegen
-          velocity = newVelocity;
+        case SPACE: // Wenn Leertaste gedrückt
+          velocity = newVelocity; // Vogel springt nach oben
           break;
-
-        default:
-          if (!isRunning) {
-            buildGame(root, stage);
+        default: // Bei anderer Taste
+          if (!isRunning) { // Wenn Spiel nicht läuft
+            buildGame(root, stage); // Starte neues Spiel
           }
           break;
       }
     });
 
-
-    stage.show();
-  } // end of public FlappyBird
-
+    stage.show(); // Zeige Fenster an
+  }
 
   private AnimationTimer getAnimationTimer(Stage stage, Pane root) {
     AnimationTimer animationTimer = new AnimationTimer() {
-
       @Override
       public void handle(long now) {
-        if (lastTime > 0) {
-          double deltaTime = (now - lastTime) / 1_000_000_000.0;
+        if (lastTime > 0) { // Wenn nicht der erste Frame
+          double deltaTime = (now - lastTime) / 1_000_000_000.0; // Zeitdifferenz berechnen
+          acceleration = 800; // Schwerkraft setzen
+          double newVelocity = velocity + acceleration * deltaTime; // Neue Geschwindigkeit berechnen
+          double newY = bird.getTranslateY() + newVelocity * deltaTime; // Neue Y-Position berechnen
 
-          acceleration = 800; // Erhöhte Beschleunigung
+          // Vogel-Animation je nach Geschwindigkeit
+          if (velocity < -100) {
+            bird.setImage(bird_flip_up); // Flügel oben
+          } else if (velocity > 100) {
+            bird.setImage(bird_flip_down); // Flügel unten
+          } else {
+            bird.setImage(bird_flip_mid); // Flügel Mitte
+          }
 
-         
-          double newVelocity = velocity + acceleration * deltaTime;
-          double newY = bird.getTranslateY() + newVelocity * deltaTime;
+          double rotation = (90 * velocity) / 1500; // Rotation berechnen
+          bird.setRotate(rotation); // Rotation setzen
 
-          
-          bird.setTranslateY(newY);          
-          velocity = newVelocity;
+          bird.setTranslateY(newY); // Neue Y-Position setzen
+          velocity = newVelocity; // Geschwindigkeit aktualisieren
 
-          moveObstacles(root);
-          hasDied(stage, root, this, new Text());
+          moveObstacles(root, stage); // Hindernisse bewegen
+          hasDied(stage, root); // Prüfe, ob Vogel gestorben ist
 
+          updateScore(); // Score-Anzeige aktualisieren
         }
-        lastTime = now;
+        lastTime = now; // Zeit aktualisieren
       }
-
     };
-
-    animationTimer.start();
-    return animationTimer;
+    animationTimer.start(); // Timer starten
+    return animationTimer; // Timer zurückgeben
   }
 
-
-  public void hasDied(Stage stage, Pane root, AnimationTimer animationTimer, Text scoreText) {
-
-    if (bird.getTranslateY() > stage.getHeight() || bird.getTranslateY() < 0) {
-      isRunning = false;
-      System.out.println("Out of Map!");
+  public void hasDied(Stage stage, Pane root) {
+    if (bird.getTranslateY() > stage.getHeight() || bird.getTranslateY() < 0) { // Prüfe, ob Vogel aus dem Fenster fliegt
+      isRunning = false; // Spiel stoppen
+      System.out.println("Out of Map!"); // Debug-Ausgabe
     }
 
-    Rectangle obj1 = obstacles.getFirst();
-    Rectangle obj2 = obstacles.get(1);
+    // Prüfe Kollision mit Hindernissen
+    if (obstacles.size() >= 2) { // Wenn mindestens zwei Hindernisse vorhanden
+      ImageView obj1 = obstacles.get(0); // Erstes Hindernis
+      ImageView obj2 = obstacles.get(1); // Zweites Hindernis
 
-    if(checkCollisions(bird, obj1) || checkCollisions(bird, obj2)) {
-        isRunning = false;
-    }
-
-      if (!isRunning) {
-        createDeathScreen(stage, root);
-      }
-
-  }
-
-  public boolean checkCollisions(Rectangle bird, Rectangle obj) {
-    boolean intersected = false;
-
-    if(bird.getBoundsInParent().intersects(obj.getBoundsInParent())) {
-      intersected = true;
-      obj.setFill(Color.RED);
-    }
-
-
-    return intersected;
-  }
-
-
-  public void moveObstacles(Pane root) {
-    ArrayList<Rectangle> toRemove = new ArrayList<>();
-
-    for (Rectangle ob : obstacles) {
-      ob.setX(ob.getX() - GAME_SPEED);
-
-      if (ob.getX() < 0 - ob.getWidth()) {
-        toRemove.add(ob);
+      if(checkCollisions(bird, obj1) || checkCollisions(bird, obj2)) { // Prüfe Kollision
+        isRunning = false; // Spiel stoppen
       }
     }
 
-    for (Rectangle ob : toRemove) {
+    if (!isRunning) { // Wenn Spiel vorbei
+      createDeathScreen(stage, root); // Death-Screen anzeigen
+    }
+  }
+
+  public boolean checkCollisions(ImageView bird, ImageView obj) {
+    boolean intersected = false; // Kollision-Flag
+
+    if(bird.getBoundsInParent().intersects(obj.getBoundsInParent())) { // Prüfe Überlappung
+      intersected = true; // Kollision erkannt
+      obj.setOpacity(0.5); // Hindernis halbtransparent machen (Feedback)
+    }
+
+    return intersected; // Rückgabe, ob Kollision vorliegt
+  }
+
+  public void moveObstacles(Pane root, Stage stage) {
+    ArrayList<ImageView> toRemove = new ArrayList<>(); // Liste für zu entfernende Hindernisse
+
+    // Score nur erhöhen, wenn der Vogel das untere Rohr eines Paares mittig passiert hat
+    for (int i = 0; i < obstacles.size(); i += 2) {
+      ImageView top = obstacles.get(i);
+      ImageView bottom = obstacles.get(i + 1);
+
+      top.setX(top.getX() - GAME_SPEED);
+      bottom.setX(bottom.getX() - GAME_SPEED);
+
+      // Score erhöhen, wenn Vogel das Hindernis-Paar passiert (nur einmal pro Paar)
+      if (bottom.getX() + bottom.getFitWidth() < bird.getTranslateX() && lastScoredObstacle != bottom) {
+        score++;
+        lastScoredObstacle = bottom;
+      }
+
+      if (top.getX() < 0 - top.getFitWidth()) {
+        toRemove.add(top);
+        toRemove.add(bottom);
+      }
+    }
+
+    for (ImageView ob : toRemove) {
       obstacles.remove(ob);
       root.getChildren().remove(ob);
     }
+    // Für jedes entfernte Paar ein neues Paar erzeugen
+    int pairsToAdd = toRemove.size() / 2;
+    if (pairsToAdd > 0) {
+      createObstacles(stage, root, pairsToAdd);
+      // ScoreText immer im Vordergrund halten
+      root.getChildren().remove(scoreText);
+      root.getChildren().add(scoreText);
+    }
   }
-
 
   private void buildGame(Pane root, Stage stage) {
-    // Alte Obstacles entfernen
-    root.getChildren().removeAll(obstacles);
-    root.getChildren().remove(bird);
+    animationTimer = getAnimationTimer(stage, root); // AnimationTimer initialisieren
 
-    obstacles.clear();
-    obstacleOffset = 0;
+    root.getChildren().clear(); // Alle Elemente entfernen
+    obstacles.clear(); // Hindernisse zurücksetzen
 
+    // Hintergrundbild hinzufügen
+    ImageView backgroundView = new ImageView(background_day); // Hintergrund-ImageView
+    backgroundView.setFitHeight(HEIGHT); // Höhe setzen
+    backgroundView.setFitWidth(WIDTH); // Breite setzen
+    backgroundView.setPreserveRatio(false); // Kein Seitenverhältnis
+    root.getChildren().add(backgroundView); // Hinzufügen
 
-    createBird(root);
-    createObstacles(stage, root, 1000);
+    createBird(root); // Vogel erzeugen
+    createObstacles(stage, root, 5); // Hindernisse erzeugen
 
-    createCenteredText(root, stage, "Score: " + score, 48, new Color(.36, .75, .24, 1), -stage.getHeight()/3, -stage.getWidth()/3);
+    // Score zurücksetzen und Score-Anzeige hinzufügen (immer zuletzt, damit sie im Vordergrund ist)
+    score = 0; // Score auf 0 setzen
+    lastScoredObstacle = null; // Letztes gezähltes Hindernis zurücksetzen
+    scoreText = new Text("Score: 0"); // Score-Text neu erstellen
+    try {
+      InputStream fontStream = getClass().getResourceAsStream("/assets/fonts/Greek-Freak.ttf");
+      if (fontStream != null) {
+        scoreText.setFont(Font.loadFont(fontStream, 44));
+      } else {
+        scoreText.setFont(Font.font("Consolas", FontWeight.BOLD, 44));
+      }
+    } catch (Exception e) {
+      scoreText.setFont(Font.font("Consolas", FontWeight.BOLD, 44));
+    }
+    scoreText.setFill(Color.WHITE);
+    scoreText.setStroke(Color.BLACK);
+    scoreText.setStrokeWidth(2);
+    scoreText.setX(24);
+    scoreText.setY(60);
+    root.getChildren().add(scoreText);
 
-    isRunning = true;
-    velocity = 150;
+    isRunning = true; // Spiel läuft
+    velocity = 150; // Anfangsgeschwindigkeit
 
-    // Score zurücksetzen
-    score = 0;
+    bird.setTranslateX(50); // Vogel X-Position
+    bird.setTranslateY(50); // Vogel Y-Position
 
-
-    bird.setTranslateX(50);
-    bird.setTranslateY(50);
-
-
-    /* Keine Ahnung was das macht tbh
-
-    root.getChildren().removeIf(node ->
-            node instanceof Text && node != scoreText ||
-                    (node instanceof Rectangle && node != bird));
-    */
-
-    // Neue Obstacles spawnen (werden dort bereits zur root hinzugefügt)
-
-    lastTime = 0;
-    animationTimer.start();
+    lastTime = 0; // Zeit zurücksetzen
+    animationTimer.start(); // Timer starten
   }
-
 
   public void createBird(Pane root) {
-    bird.setHeight(50);
-    bird.setWidth(50);
-
-    bird.setFill(new Color(0.40, 0.90, 1.00, .5));
-    bird.setX(50);
-
-    root.getChildren().add(bird);
+    bird = new ImageView(bird_flip_mid); // Vogel mit mittlerer Flügelstellung
+    bird.setFitWidth(50); // Breite setzen
+    bird.setFitHeight(50); // Höhe setzen
+    bird.setX(50); // X-Position
+    bird.setY(50); // Y-Position
+    root.getChildren().add(bird); // Vogel hinzufügen
   }
 
-
   public void createObstacles(Stage stage, Pane root, double numberOfObstacles) {
-    double spacing = bird.getHeight()*4;
-    Random random = new Random();
+    double spacing = bird.getFitHeight() * 8; // Abstand zwischen Rohren
+    Random random = new Random(); // Zufallszahlengenerator
 
-    for (int i = 0; i < numberOfObstacles; i++)  {
+    double lastX = stage.getWidth(); // Start-X-Position
+    if (!obstacles.isEmpty()) { // Wenn schon Hindernisse existieren
+      lastX = obstacles.getLast().getX(); // Letztes Hindernis nehmen
+    }
 
-      double maxHeight = stage.getHeight() - spacing;
-      double heightTop = random.nextDouble(maxHeight);
-      double bottomHeight = maxHeight - heightTop;
+    for (int i = 0; i < numberOfObstacles; i++) { // Für gewünschte Anzahl
+      double maxHeight = stage.getHeight() - spacing; // Maximale Höhe für obere Röhre
+      double heightTop = random.nextDouble(maxHeight); // Zufällige Höhe oben
+      double bottomHeight = maxHeight - heightTop; // Rest für untere Röhre
 
+      double x = (i == 0 && obstacles.isEmpty()) ?
+              stage.getWidth() :
+              lastX + 500; // Abstand zwischen Hindernissen
 
-      int x = (int) (stage.getWidth() + (obstacleOffset * 300)); // 300 Pixel Abstand zwischen Säulenpaaren
-      obstacleOffset++;
+      lastX = x; // X-Position aktualisieren
 
-      Rectangle top = new Rectangle();
-      top.setFill(new Color(.55, .55, .55, 1));
-      top.setHeight(heightTop);
-      top.setWidth(50);
-      top.setX(x);
-      top.setY(0);
+      // Oberes Rohr
+      ImageView top = new ImageView(pipe_green); // Oberes Rohr
+      top.setFitWidth(100); // Breite setzen
+      top.setFitHeight(heightTop); // Höhe setzen
+      top.setX(x); // X-Position
+      top.setY(0); // Y-Position
+      top.setScaleY(-1); // Vertikal spiegeln
+      top.setClip(null); // Kein Clipping, damit nichts abgeschnitten wird
 
-      Rectangle bottom = new Rectangle();
-      bottom.setFill(new Color(.55, .55, .55, 1));
-      bottom.setHeight(bottomHeight);
-      bottom.setWidth(50);
-      bottom.setX(x);
-      bottom.setY(top.getHeight() + spacing);
+      // Unteres Rohr
+      ImageView bottom = new ImageView(pipe_green); // Unteres Rohr
+      bottom.setFitWidth(100); // Breite setzen
+      bottom.setFitHeight(bottomHeight); // Höhe setzen
+      bottom.setX(x); // X-Position
+      bottom.setY(heightTop + spacing); // Y-Position
+      bottom.setClip(null); // Kein Clipping
 
-      obstacles.add(top);
-      obstacles.add(bottom);
-
-      root.getChildren().addAll(top, bottom);
+      obstacles.add(top); // Oberes Rohr zur Liste
+      obstacles.add(bottom); // Unteres Rohr zur Liste
+      root.getChildren().addAll(top, bottom); // Beide Rohre zur Anzeige
     }
   }
 
   private void createDeathScreen(Stage stage, Pane root) {
-    animationTimer.stop();
+    animationTimer.stop(); // Animation stoppen
 
-    Rectangle overlay = new Rectangle();
-    overlay.setFill(new Color(0.00, 0.00, 0.00, 0.5)); // Fehler 5: Korrektur der Schreibweise
+    Rectangle overlay = new Rectangle(); // Overlay für Transparenz
+    overlay.setFill(new Color(0.00, 0.00, 0.00, 0.5)); // Schwarzes Overlay halbtransparent
+    overlay.setX(0); // X-Position
+    overlay.setY(0); // Y-Position
+    overlay.setWidth(stage.getWidth()); // Breite
+    overlay.setHeight(stage.getHeight()); // Höhe
+    root.getChildren().add(overlay); // Overlay hinzufügen
 
-    overlay.setX(0);
-    overlay.setY(0);
+    // Gameover-Bild anzeigen
+    ImageView gameoverView = new ImageView(gameover); // Gameover-ImageView
+    gameoverView.setFitWidth(300); // Breite setzen
+    gameoverView.setPreserveRatio(true); // Seitenverhältnis beibehalten
+    gameoverView.setX((stage.getWidth() - 300) / 2); // Zentrieren
+    gameoverView.setY(stage.getHeight() / 2 - 150); // Y-Position setzen
+    root.getChildren().add(gameoverView); // Gameover-Bild hinzufügen
 
-    overlay.setWidth(stage.getWidth());
-    overlay.setHeight(stage.getHeight());
-
-
-    root.getChildren().add(overlay);
-    createCenteredText(root, stage, "You Died!", 48, Color.WHITE, 0, 0);
   }
 
-  private void createCenteredText(Pane root, Stage stage, String string, int fontSize, Color color, double verticalOffset, double horizontalOffset) {
-    Font font;
-    try {
-      font = Font.loadFont(getClass().getResourceAsStream("/fonts/font.ttf"), fontSize);
-      if (font == null) {
-        font = Font.font("Arial", fontSize);
-      }
-    } catch (Exception e) {
-      font = Font.font("Arial", fontSize);
-    }
-
-    Text text = new Text(string);
-    text.setFont(font);
-    text.setTextAlignment(TextAlignment.CENTER);
-
-    text.applyCss();
-
-    double textW = text.getBoundsInLocal().getWidth();
-    double textH = text.getBoundsInLocal().getHeight();
-
-    text.setX(((stage.getWidth() - textW) / 2) + horizontalOffset);
-    text.setY(((stage.getHeight() - textH) / 2) + verticalOffset);
-
-    text.setFill(color);
-    root.getChildren().add(text);
+  private void updateScore() {
+    scoreText.setText("Score: " + score); // Score-Text aktualisieren
   }
-
 
   private Scene createScene(Pane root, Stage stage) {
-    Scene scene = new Scene(root, 600, 600);
-    scene.setFill(Color.GAINSBORO);
-
-    stage.setScene(scene);
-    return scene;
+    Scene scene = new Scene(root, 600, 600); // Szene mit Root-Container
+    stage.setScene(scene); // Szene dem Fenster zuweisen
+    return scene; // Szene zurückgeben
   }
 
-
- 
-  
-  // Anfang Methoden
-  
   public static void main(String[] args) {
-
-    launch(args);
-
-  } // end of main
-  
-  // Ende Methoden
-} // end of class FlappyBird
+    launch(args); // JavaFX-Anwendung starten
+  }
+}
