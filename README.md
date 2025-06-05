@@ -33,8 +33,8 @@ Fly through randomly placed pipes by pressing `SPACE` to jump. Score a point for
 ### 1. Clone
 
 ```bash
-git clone https://github.com/yourusername/flappy-bird-javafx.git
-cd flappy-bird-javafx
+git clone https://github.com/koevertigo/FlappyBird.git
+cd FlappyBird
 ```
 
 ### 2. Assets Folder Structure
@@ -45,9 +45,13 @@ src/
 └── assets/
     ├── textures/
     │   ├── background-day.png
+    │   ├── gameover.png
+    │   ├── message.png
     │   ├── pipe-green.png
-    │   ├── yellowbird-*.png
-    │   └── gameover.png
+    │   ├── pipe-red.png
+    │   ├── yellowbird-downflap.png
+    │   ├── yellowbird-midflap.png
+    │   ├── yellowbird-upflap.png
     └── fonts/
         └── flappy_bird.ttf
 ```
@@ -71,7 +75,7 @@ java --module-path "path/to/javafx-sdk/lib" --add-modules javafx.controls,javafx
 
 ## ✨ Features
 
-* 🎯 Smooth 60 FPS gameplay
+* 🎯 Smooth gameplay
 * 🔁 Procedural pipe generation
 * 💥 Accurate collision detection
 * 📊 Real-time scoring
@@ -84,7 +88,7 @@ java --module-path "path/to/javafx-sdk/lib" --add-modules javafx.controls,javafx
 ## 🛠 Project Structure
 
 ```
-flappy-bird-javafx/
+FlappyBird/
 ├── FlappyBird.java       # Main class
 ├── assets/               # Images and fonts
 └── docs/                 # Optional documentation
