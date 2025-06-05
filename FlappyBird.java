@@ -71,8 +71,86 @@ public class FlappyBird extends Application {
     messageView.setY((HEIGHT - messageView.getImage().getHeight()) / 2); // Zentriere vertikal
     root.getChildren().add(messageView); // Füge Startbild hinzu
 
-    // Score-Anzeige initialisieren (erst später zum root hinzufügen!)
-    scoreText = new Text("Score: 0"); // Erstelle Score-Text
+  private void resetGameState() {
+    if (gameTimer != null) {
+      gameTimer.stop();
+    }
+    obstacles.clear();
+    score = 0;
+    birdVelocity = 150;
+    lastFrameTime = 0;
+    lastScoredObstacle = null;
+  }
+
+  private void setupGameScene() {
+    gameRoot.getChildren().clear();
+    addBackground();
+  }
+
+  private void createBird() {
+    bird = new ImageView(birdMidFlap);
+    bird.setFitWidth(BIRD_SIZE);
+    bird.setFitHeight(BIRD_SIZE);
+    bird.setTranslateX(50);
+    bird.setTranslateY(50);
+    gameRoot.getChildren().add(bird);
+  }
+
+  private void createInitialObstacles() {
+    createObstacles(INITIAL_OBSTACLES, WINDOW_WIDTH);
+  }
+
+  private void createObstacles(int count, double startX) {
+    double currentX = startX;
+
+    // If obstacles exist, start from the last obstacle's position
+    if (!obstacles.isEmpty()) {
+      currentX = obstacles.getLast().getX() + PIPE_SPACING;
+    }
+
+    for (int i = 0; i < count; i++) {
+      double maxTopHeight = WINDOW_HEIGHT - PIPE_GAP;
+      double topHeight = random.nextDouble() * maxTopHeight;
+      double bottomHeight = maxTopHeight - topHeight;
+
+      // Create top pipe (flipped)
+      ImageView topPipe = createPipe(currentX, 0, topHeight, true);
+
+      // Create bottom pipe
+      ImageView bottomPipe = createPipe(currentX, topHeight + PIPE_GAP, bottomHeight, false);
+
+      obstacles.add(topPipe);
+      obstacles.add(bottomPipe);
+      gameRoot.getChildren().addAll(topPipe, bottomPipe);
+
+      currentX += PIPE_SPACING;
+    }
+  }
+
+  private ImageView createPipe(double x, double y, double height, boolean flipped) {
+    ImageView pipe = new ImageView(pipeGreen);
+    pipe.setFitWidth(PIPE_WIDTH);
+    pipe.setFitHeight(height);
+    pipe.setX(x);
+    pipe.setY(y);
+    if (flipped) {
+      pipe.setScaleY(-1);
+    }
+    return pipe;
+  }
+
+  private void setupScoreDisplay() {
+    scoreText = new Text("Score: 0");
+    setupScoreFont();
+    scoreText.setFill(Color.WHITE);
+    scoreText.setStroke(Color.BLACK);
+    scoreText.setStrokeWidth(2);
+    scoreText.setX(24);
+    scoreText.setY(60);
+    gameRoot.getChildren().add(scoreText);
+  }
+
+  private void setupScoreFont() {
     try {
       InputStream fontStream = getClass().getResourceAsStream("/assets/fonts/Greek-Freak.ttf");
       if (fontStream != null) {
