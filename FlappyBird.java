@@ -23,12 +23,12 @@ public class FlappyBird extends Application {
   private static final double WINDOW_WIDTH = 600;
   private static final double WINDOW_HEIGHT = 800;
   private static final double GRAVITY = 800; // Beschleunigung nach unten (Pixel/Sekunde^2)
-  private static final double GAME_SPEED = 1.5; // Geschwindigkeit, mit der sich die Hindernisse bewegen
+  private static final double GAME_SPEED = 1.75; // Geschwindigkeit, mit der sich die Hindernisse bewegen
   private static final double JUMP_VELOCITY = -262.5; // Geschwindigkeit beim Sprung (negativ = nach oben)
   private static final double BIRD_SIZE = 50; // Größe des Vogels (Breite und Höhe)
   private static final double PIPE_WIDTH = 100; // Breite der Röhren
   private static final double PIPE_GAP = 500; // Abstand zwischen oberer und unterer Röhre
-  private static final double PIPE_SPACING = 300; // Abstand zwischen zwei Röhrenpaaren
+  private static final double PIPE_SPACING = 250; // Abstand zwischen zwei Röhrenpaaren
   private static final int INITIAL_OBSTACLES = 5; // Anzahl der Hindernispaare zu Spielbeginn
 
   // Texturen für das Spiel (Hintergrund, Vogel, Röhren, etc.)
